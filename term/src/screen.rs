@@ -421,7 +421,7 @@ impl Screen {
 
     pub fn cell_mut(&mut self, x: usize, y: VisibleRowIndex) -> Option<&mut Cell> {
         let line_idx = self.phys_row(y);
-        let line = self.lines.get_mut(line_idx)?;
+        let line = self.lines.get_mut(line_idx as _)?;
         line.cells_mut().get_mut(x)
     }
 
