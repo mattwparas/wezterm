@@ -431,7 +431,11 @@ impl Screen {
         line.cells_mut().get(x)
     }
 
-    pub fn get_cell_scrollback(&mut self, x: usize, y: ScrollbackOrVisibleRowIndex) {
+    pub fn get_cell_scrollback(
+        &mut self,
+        x: usize,
+        y: ScrollbackOrVisibleRowIndex,
+    ) -> Option<&Cell> {
         let visible_row = self.scrollback_or_visible_row(y);
         let line = self.lines.get_mut(line_idx)?;
         line.cells_mut().get(x)
