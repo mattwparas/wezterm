@@ -1040,7 +1040,7 @@ impl TerminalState {
         self.set_cursor_position_absolute(x as usize, y);
     }
 
-    fn scroll_up(&mut self, num_rows: usize) {
+    pub fn scroll_up(&mut self, num_rows: usize) {
         let seqno = self.seqno;
         let blank_attr = self.pen.clone_sgr_only();
         let top_and_bottom_margins = self.top_and_bottom_margins.clone();
@@ -1056,7 +1056,7 @@ impl TerminalState {
         )
     }
 
-    fn scroll_down(&mut self, num_rows: usize) {
+    pub fn scroll_down(&mut self, num_rows: usize) {
         let seqno = self.seqno;
         let blank_attr = self.pen.clone_sgr_only();
         let top_and_bottom_margins = self.top_and_bottom_margins.clone();
