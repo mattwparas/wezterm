@@ -437,7 +437,7 @@ impl Screen {
         y: ScrollbackOrVisibleRowIndex,
     ) -> Option<&Cell> {
         let visible_row = self.scrollback_or_visible_row(y);
-        let line = self.lines.get_mut(line_idx)?;
+        let line = self.lines.get_mut(visible_row)?;
         line.cells_mut().get(x)
     }
 
