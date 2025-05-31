@@ -23,7 +23,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
-use termwiz::cell::{CellAttributes, UnicodeVersion};
+use termwiz::cell::CellAttributes;
 use termwiz::surface::{Line, SEQ_ZERO};
 use unicode_normalization::UnicodeNormalization;
 use wezterm_bidi::Direction;
@@ -67,7 +67,7 @@ pub use termwindow::{set_window_class, set_window_position, TermWindow, ICON_DAT
 
 #[derive(Debug, Parser)]
 #[command(
-    about = "Wez's Terminal Emulator\nhttp://github.com/wez/wezterm",
+    about = "Wez's Terminal Emulator\nhttp://github.com/wezterm/wezterm",
     version = config::wezterm_version()
 )]
 struct Opt {
@@ -414,9 +414,8 @@ async fn async_run_terminal_gui(
         config::RUNTIME_DIR.join(format!("gui-sock-{}", unsafe { libc::getpid() }));
     std::env::set_var("WEZTERM_UNIX_SOCKET", unix_socket_path.clone());
     wezterm_blob_leases::register_storage(Arc::new(
-        wezterm_blob_leases::simple_tempdir::SimpleTempDir::new()?,
+        wezterm_blob_leases::simple_tempdir::SimpleTempDir::new_in(&*config::CACHE_DIR)?,
     ))?;
-
     if let Err(err) = spawn_mux_server(unix_socket_path, should_publish) {
         log::warn!("{:#}", err);
     }
@@ -884,10 +883,7 @@ pub fn run_ls_fonts(config: config::ConfigHandle, cmd: &LsFontsCommand) -> anyho
         None
     };
 
-    let unicode_version = UnicodeVersion {
-        version: config.unicode_version,
-        ambiguous_are_wide: config.treat_east_asian_ambiguous_width_as_wide,
-    };
+    let unicode_version = config.unicode_version();
 
     let text = match (&cmd.text, &cmd.codepoints) {
         (Some(text), _) => Some(text.to_string()),
@@ -917,7 +913,7 @@ pub fn run_ls_fonts(config: config::ConfigHandle, cmd: &LsFontsCommand) -> anyho
             &text,
             &CellAttributes::default(),
             SEQ_ZERO,
-            Some(unicode_version),
+            Some(&unicode_version),
         );
         let cell_clusters = line.cluster(bidi_hint);
         let ft_lib = wezterm_font::ftwrap::Library::new()?;
@@ -1219,6 +1215,9 @@ fn run() -> anyhow::Result<()> {
         opts.skip_config,
     )?;
     let config = config::configuration();
+    if let Some(value) = &config.default_ssh_auth_sock {
+        std::env::set_var("SSH_AUTH_SOCK", value);
+    }
 
     let sub = match opts.cmd.as_ref().cloned() {
         Some(SubCommand::BlockingStart(start)) => {

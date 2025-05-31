@@ -17,8 +17,8 @@ use url::Url;
 use wezterm_dynamic::Value;
 use wezterm_term::color::ColorPalette;
 use wezterm_term::{
-    Clipboard, DownloadHandler, KeyCode, KeyModifiers, MouseEvent, SemanticZone, StableRowIndex,
-    TerminalConfiguration, TerminalSize,
+    Clipboard, DownloadHandler, KeyCode, KeyModifiers, MouseEvent, Progress, SemanticZone,
+    StableRowIndex, TerminalConfiguration, TerminalSize,
 };
 
 static PANE_ID: ::std::sync::atomic::AtomicUsize = ::std::sync::atomic::AtomicUsize::new(0);
@@ -83,6 +83,23 @@ impl std::ops::DerefMut for Pattern {
             Pattern::CaseSensitiveString(s) => s,
             Pattern::CaseInSensitiveString(s) => s,
             Pattern::Regex(s) => s,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum PatternType {
+    CaseSensitiveString,
+    CaseInSensitiveString,
+    Regex,
+}
+
+impl From<&Pattern> for PatternType {
+    fn from(value: &Pattern) -> Self {
+        match value {
+            Pattern::CaseSensitiveString(_) => PatternType::CaseSensitiveString,
+            Pattern::CaseInSensitiveString(_) => PatternType::CaseInSensitiveString,
+            Pattern::Regex(_) => PatternType::Regex,
         }
     }
 }
@@ -215,6 +232,9 @@ pub trait Pane: Downcast + Send + Sync {
     fn get_dimensions(&self) -> RenderableDimensions;
 
     fn get_title(&self) -> String;
+    fn get_progress(&self) -> Progress {
+        Progress::None
+    }
     fn send_paste(&self, text: &str) -> anyhow::Result<()>;
     fn reader(&self) -> anyhow::Result<Option<Box<dyn std::io::Read + Send>>>;
     fn writer(&self) -> MappedMutexGuard<dyn std::io::Write>;

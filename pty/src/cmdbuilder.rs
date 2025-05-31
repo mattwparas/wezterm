@@ -1,12 +1,14 @@
 #[cfg(unix)]
 use anyhow::Context;
 #[cfg(feature = "serde_support")]
-use serde_derive::*;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
 #[cfg(windows)]
 use std::os::windows::ffi::OsStrExt;
-use std::path::{Component, Path};
+#[cfg(unix)]
+use std::path::Component;
+use std::path::Path;
 
 /// Used to deal with Windows having case-insensitive environment variables.
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
@@ -272,6 +274,22 @@ impl CommandBuilder {
             panic!("attempted to add args to a default_prog builder");
         }
         self.args.push(arg.as_ref().to_owned());
+    }
+
+    /// If a builder is_default_prog, then this function can be used to
+    /// set the actual prog that should be used.
+    /// This is intended to facilitate plumbing through the handling
+    /// of the underlying default prog when merging together supplemental
+    /// env and cwd information.
+    /// You will not typically use this method in your own code.
+    pub fn replace_default_prog(&mut self, args: impl IntoIterator<Item = impl AsRef<OsStr>>) {
+        if !self.is_default_prog() {
+            panic!("attempted to replace_default_prog on a non-default_prog builder");
+        }
+
+        for arg in args {
+            self.args.push(arg.as_ref().to_owned());
+        }
     }
 
     /// Append a sequence of arguments to the current command line
@@ -605,8 +623,6 @@ impl CommandBuilder {
     }
 
     pub(crate) fn current_directory(&self) -> Option<Vec<u16>> {
-        use std::path::Path;
-
         let home: Option<&OsStr> = self
             .get_env("USERPROFILE")
             .filter(|path| Path::new(path).is_dir());
@@ -745,6 +761,7 @@ impl CommandBuilder {
     }
 }
 
+#[cfg(unix)]
 /// Returns true if the path begins with `./` or `../`
 fn is_cwd_relative_path<P: AsRef<Path>>(p: P) -> bool {
     matches!(
@@ -757,6 +774,7 @@ fn is_cwd_relative_path<P: AsRef<Path>>(p: P) -> bool {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
     fn test_cwd_relative() {
         assert!(is_cwd_relative_path("."));

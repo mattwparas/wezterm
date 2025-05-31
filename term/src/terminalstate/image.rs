@@ -4,10 +4,10 @@ use humansize::{SizeFormatter, DECIMAL};
 use num_traits::{One, Zero};
 use ordered_float::NotNan;
 use std::sync::Arc;
-use termwiz::cell::Cell;
-use termwiz::image::{ImageCell, ImageDataType};
-use termwiz::surface::change::ImageData;
-use termwiz::surface::TextureCoordinate;
+use wezterm_cell::image::{ImageCell, ImageDataType};
+use wezterm_cell::Cell;
+use wezterm_surface::change::ImageData;
+use wezterm_surface::TextureCoordinate;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PlacementInfo {
@@ -297,7 +297,7 @@ pub(crate) struct ImageInfo {
 }
 
 pub(crate) fn dimensions(data: &[u8]) -> anyhow::Result<ImageInfo> {
-    let reader = image::io::Reader::new(std::io::Cursor::new(data)).with_guessed_format()?;
+    let reader = image::ImageReader::new(std::io::Cursor::new(data)).with_guessed_format()?;
     let format = reader
         .format()
         .ok_or_else(|| anyhow::anyhow!("unknown format!?"))?;

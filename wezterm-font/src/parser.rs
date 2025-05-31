@@ -217,7 +217,7 @@ impl Names {
         // as freetype has a limited set of encodings that it supports.
         // We process the name table for ourselves to increase our chances
         // of returning a good version of the name.
-        // See <https://github.com/wez/wezterm/issues/1761#issuecomment-1079150560>
+        // See <https://github.com/wezterm/wezterm/issues/1761#issuecomment-1079150560>
         // for a case where freetype returns `?????` for a name.
         let names = face.get_sfnt_names();
 
@@ -545,7 +545,7 @@ impl ParsedFont {
             let face = lib.face_from_locator(&self.handle)?;
             *cov = face.compute_coverage();
             let elapsed = t.elapsed();
-            metrics::histogram!("font.compute.codepoint.coverage", elapsed);
+            metrics::histogram!("font.compute.codepoint.coverage").record(elapsed);
             log::debug!(
                 "{} codepoint coverage computed in {:?}",
                 self.names.full_name,

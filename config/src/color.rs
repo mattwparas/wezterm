@@ -170,6 +170,12 @@ pub struct Palette {
     pub quick_select_label_bg: Option<ColorSpec>,
     pub quick_select_match_fg: Option<ColorSpec>,
     pub quick_select_match_bg: Option<ColorSpec>,
+
+    pub input_selector_label_fg: Option<ColorSpec>,
+    pub input_selector_label_bg: Option<ColorSpec>,
+
+    pub launcher_label_fg: Option<ColorSpec>,
+    pub launcher_label_bg: Option<ColorSpec>,
 }
 impl_lua_conversion_dynamic!(Palette);
 
@@ -219,6 +225,10 @@ impl Palette {
             quick_select_label_bg: overlay!(quick_select_label_bg),
             quick_select_match_fg: overlay!(quick_select_match_fg),
             quick_select_match_bg: overlay!(quick_select_match_bg),
+            input_selector_label_fg: overlay!(input_selector_label_fg),
+            input_selector_label_bg: overlay!(input_selector_label_bg),
+            launcher_label_fg: overlay!(launcher_label_fg),
+            launcher_label_bg: overlay!(launcher_label_bg),
         }
     }
 }
@@ -728,8 +738,15 @@ fn dynamic_to_toml(value: Value) -> anyhow::Result<toml::Value> {
 
 impl ColorSchemeFile {
     pub fn from_toml_value(value: &toml::Value) -> anyhow::Result<Self> {
-        Self::from_dynamic(&crate::toml_to_dynamic(value), Default::default())
-            .map_err(|e| anyhow::anyhow!("{}", e))
+        let scheme = Self::from_dynamic(&crate::toml_to_dynamic(value), Default::default())
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+        anyhow::ensure!(
+            scheme.colors.ansi.is_some(),
+            "scheme is missing ANSI colors"
+        );
+
+        Ok(scheme)
     }
 
     pub fn from_toml_str(s: &str) -> anyhow::Result<Self> {

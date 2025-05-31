@@ -9,7 +9,7 @@ use std::io::Read;
 use termwiz::caps::Capabilities;
 use termwiz::escape::esc::{Esc, EscCode};
 use termwiz::escape::OneBased;
-use termwiz::input::{InputEvent, KeyCode, KeyEvent};
+use termwiz::input::{InputEvent, KeyCode, KeyEvent, Modifiers};
 use termwiz::surface::change::Change;
 use termwiz::surface::Position;
 use termwiz::terminal::{ScreenSize, Terminal};
@@ -23,7 +23,7 @@ mod cli;
 
 #[derive(Debug, Parser)]
 #[command(
-    about = "Wez's Terminal Emulator\nhttp://github.com/wez/wezterm",
+    about = "Wez's Terminal Emulator\nhttp://github.com/wezterm/wezterm",
     version = wezterm_version()
 )]
 pub struct Opt {
@@ -181,7 +181,7 @@ struct ImgCatCommand {
     #[arg(long)]
     no_move_cursor: bool,
 
-    /// Wait for enter to be pressed after displaying the image
+    /// Wait for enter/escape/ctrl-c/ctrl-d to be pressed after displaying the image
     #[arg(long)]
     hold: bool,
 
@@ -384,7 +384,7 @@ impl ImgCatCommand {
     }
 
     fn image_dimensions(data: &[u8]) -> anyhow::Result<ImageInfo> {
-        let reader = image::io::Reader::new(std::io::Cursor::new(data)).with_guessed_format()?;
+        let reader = image::ImageReader::new(std::io::Cursor::new(data)).with_guessed_format()?;
         let format = reader
             .format()
             .ok_or_else(|| anyhow::anyhow!("unknown image format!?"))?;
@@ -587,12 +587,19 @@ impl ImgCatCommand {
         }
 
         if self.hold {
+            term.set_raw_mode()?;
             while let Ok(Some(event)) = term.poll_input(None) {
                 match event {
-                    InputEvent::Key(KeyEvent {
-                        key: KeyCode::Enter,
-                        modifiers: _,
-                    }) => {
+                    InputEvent::Key(
+                        KeyEvent {
+                            key: KeyCode::Enter | KeyCode::Escape,
+                            modifiers: _,
+                        }
+                        | KeyEvent {
+                            key: KeyCode::Char('c') | KeyCode::Char('d'),
+                            modifiers: Modifiers::CTRL,
+                        },
+                    ) => {
                         break;
                     }
                     _ => {}
@@ -717,6 +724,9 @@ fn init_config(opts: &Opt) -> anyhow::Result<ConfigHandle> {
     .context("config::common_init")?;
     let config = config::configuration();
     config.update_ulimit()?;
+    if let Some(value) = &config.default_ssh_auth_sock {
+        std::env::set_var("SSH_AUTH_SOCK", value);
+    }
     Ok(config)
 }
 
