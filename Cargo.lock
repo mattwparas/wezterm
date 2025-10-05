@@ -955,7 +955,6 @@ dependencies = [
  "wezterm-config-derive",
  "wezterm-dynamic",
  "wezterm-input-types",
- "wezterm-ssh",
  "wezterm-term",
  "winapi",
 ]
