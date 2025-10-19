@@ -319,8 +319,11 @@ fn read_from_pane_pty(
     while !dead.load(Ordering::Relaxed) {
         match reader.read(&mut buf) {
             Ok(size) if size == 0 => {
-                log::trace!("read_pty EOF: pane_id {}", pane_id);
-                break;
+                // log::debug!("read_pty EOF: pane_id {}", pane_id);
+                // break;
+            }
+            Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                continue;
             }
             Err(err) => {
                 error!("read_pty failed: pane {} {:?}", pane_id, err);
@@ -330,15 +333,18 @@ fn read_from_pane_pty(
                 histogram!("read_from_pane_pty.bytes.rate").record(size as f64);
                 log::trace!("read_pty pane {pane_id} read {size} bytes");
                 if let Err(err) = tx.write_all(&buf[..size]) {
-                    error!(
+                    log::debug!(
                         "read_pty failed to write to parser: pane {} {:?}",
-                        pane_id, err
+                        pane_id,
+                        err
                     );
                     break;
                 }
             }
         }
     }
+
+    log::debug!("Dead: {:?}", dead);
 
     match exit_behavior.unwrap_or_else(|| configuration().exit_behavior) {
         ExitBehavior::Hold | ExitBehavior::CloseOnCleanExit => {
@@ -934,7 +940,7 @@ impl Mux {
         }
 
         for window_id in dead_windows {
-            log::trace!("window {} is dead", window_id);
+            log::debug!("window {} is dead", window_id);
             self.remove_window_internal(window_id);
         }
 

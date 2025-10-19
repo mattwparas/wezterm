@@ -312,7 +312,7 @@ impl RemoteSshDomain {
                 cmd.as_unix_command_line()?
             };
 
-            Ok(cd_cmd + &shell_words::join(env_cmd) + " " + &cmd)
+            Ok(cd_cmd + shell_words::join(env_cmd).as_str() + " " + cmd.as_str())
         }
 
         let command_line = match (cmd.is_default_prog(), self.dom.assume_shell, command_dir) {

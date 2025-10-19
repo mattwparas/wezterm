@@ -49,6 +49,10 @@ wezterm-dynamic.workspace = true
 wezterm-ssh.workspace = true
 wezterm-term = { workspace=true, features=["use_serde"] }
 
+termina.workspace = true
+helix-tui.workspace = true
+helix-term.workspace = true
+
 [target."cfg(windows)".dependencies]
 ntapi.workspace = true
 winapi = { workspace=true, features = [

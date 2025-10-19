@@ -122,13 +122,19 @@ impl Line {
     /// Line doesn't implement Hash in terms of this function as compute_shape_hash
     /// doesn't every possible bit of internal state, and we don't want to
     /// encourage using Line directly as a hash key.
-    pub fn compute_shape_hash(&self) -> [u8; 16] {
-        let mut hasher = SipHasher::new();
+    // pub fn compute_shape_hash(&self) -> [u8; 16] {
+    pub fn compute_shape_hash(&self) -> [u8; 8] {
+        // let mut hasher = SipHasher::new();
+        let mut hasher = rustc_hash::FxHasher::default();
+
         self.bits.bits().hash(&mut hasher);
         for cell in self.visible_cells() {
             cell.compute_shape_hash(&mut hasher);
         }
-        hasher.finish128().as_bytes()
+
+        // hasher.finish128().as_bytes()
+
+        core::hash::Hasher::finish(&hasher).to_be_bytes()
     }
 
     pub fn with_width(width: usize, seqno: SequenceNo) -> Self {

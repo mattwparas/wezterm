@@ -277,6 +277,15 @@ zbus = "4.2"
 zstd = "0.11"
 zvariant = "4.0"
 
+
+# Random stuff for helix?
+termina = { path = "../scratch/termina", features = ["in-memory"] }
+helix-tui = { path = "../scratch/helix/helix-tui" }
+helix-term = { path = "../scratch/helix/helix-term" }
+mimalloc = "0.1.47"
+rustc-hash = "2.1.1"
+
+
 [patch.crates-io]
 # We use our own vendored cairo, which has minimal deps and should just
 # build via cargo.

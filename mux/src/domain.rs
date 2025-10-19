@@ -5,7 +5,7 @@
 //! container or actually remote, running on the other end
 //! of an ssh session somewhere.
 
-use crate::localpane::LocalPane;
+use crate::localpane::{FakePty, LocalPane};
 use crate::pane::{alloc_pane_id, Pane, PaneId};
 use crate::tab::{SplitRequest, Tab, TabId};
 use crate::window::WindowId;
@@ -594,69 +594,87 @@ impl Domain for LocalDomain {
         command_dir: Option<String>,
     ) -> anyhow::Result<Arc<dyn Pane>> {
         let pane_id = alloc_pane_id();
-        let cmd = self
-            .build_command(command, command_dir, pane_id)
-            .await
-            .context("build_command")?;
-        let pair = self
-            .pty_system
-            .lock()
-            .openpty(crate::terminal_size_to_pty_size(size)?)?;
+        // let cmd = self
+        //     .build_command(command, command_dir, pane_id)
+        //     .await
+        //     .context("build_command")?;
+        // let pair = self
+        //     .pty_system
+        //     .lock()
+        //     .openpty(crate::terminal_size_to_pty_size(size)?)?;
 
-        let command_line = cmd
-            .as_unix_command_line()
-            .unwrap_or_else(|err| format!("error rendering command line: {:?}", err));
-        let command_description = format!(
-            "\"{}\" in domain \"{}\"",
-            if command_line.is_empty() {
-                cmd.get_shell()
-            } else {
-                command_line
-            },
-            self.name
-        );
-        let child_result = pair.slave.spawn_command(cmd);
-        let mut writer = WriterWrapper::new(pair.master.take_writer()?);
+        // let command_line = cmd
+        //     .as_unix_command_line()
+        //     .unwrap_or_else(|err| format!("error rendering command line: {:?}", err));
+        // let command_description = format!(
+        //     "\"{}\" in domain \"{}\"",
+        //     if command_line.is_empty() {
+        //         cmd.get_shell()
+        //     } else {
+        //         command_line
+        //     },
+        //     self.name
+        // );
+        // let child_result = pair.slave.spawn_command(cmd);
+        // let mut writer = WriterWrapper::new(pair.master.take_writer()?);
 
-        let mut terminal = wezterm_term::Terminal::new(
+        let mut fake_pty = FakePty::new_fake(size.rows as _, size.cols as _);
+
+        let writer = fake_pty.reader.clone();
+
+        // println!("Getting here!");
+
+        let terminal = wezterm_term::Terminal::new(
             size,
             std::sync::Arc::new(config::TermConfig::new()),
             "WezTerm",
             config::wezterm_version(),
             Box::new(writer.clone()),
         );
-        if self.is_conpty() {
-            terminal.enable_conpty_quirks();
-        }
+        // if self.is_conpty() {
+        //     terminal.enable_conpty_quirks();
+        // }
 
-        let pane: Arc<dyn Pane> = match child_result {
-            Ok(child) => Arc::new(LocalPane::new(
-                pane_id,
-                terminal,
-                child,
-                pair.master,
-                Box::new(writer),
-                self.id,
-                command_description,
-            )),
-            Err(err) => {
-                // Show the error to the user in the new pane
-                write!(writer, "{err:#}").ok();
+        let child = fake_pty.create_child();
 
-                // and return a dummy pane that has exited
-                Arc::new(LocalPane::new(
-                    pane_id,
-                    terminal,
-                    Box::new(FailedProcessSpawn {}),
-                    Box::new(FailedSpawnPty {
-                        inner: Mutex::new(pair.master),
-                    }),
-                    Box::new(writer),
-                    self.id,
-                    command_description,
-                ))
-            }
-        };
+        let pane: Arc<dyn Pane> = Arc::new(LocalPane::new(
+            pane_id,
+            terminal,
+            child,
+            Box::new(fake_pty),
+            Box::new(writer),
+            self.id,
+            "helix".to_string(),
+        ));
+
+        // let pane: Arc<dyn Pane> = match child_result {
+        //     Ok(child) => Arc::new(LocalPane::new(
+        //         pane_id,
+        //         terminal,
+        //         child,
+        //         pair.master,
+        //         Box::new(writer),
+        //         self.id,
+        //         command_description,
+        //     )),
+        //     Err(err) => {
+        //         // Show the error to the user in the new pane
+        //         write!(writer, "{err:#}").ok();
+
+        //         // and return a dummy pane that has exited
+        //         Arc::new(LocalPane::new(
+        //             pane_id,
+        //             terminal,
+        //             Box::new(FailedProcessSpawn {}),
+        //             Box::new(FailedSpawnPty {
+        //                 inner: Mutex::new(pair.master),
+        //             }),
+        //             Box::new(writer),
+        //             self.id,
+        //             command_description,
+        //         ))
+        //     }
+        // };
 
         let mux = Mux::get();
         mux.add_pane(&pane)?;

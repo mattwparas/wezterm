@@ -50,7 +50,8 @@ pub mod window_buttons;
 pub struct CachedLineState {
     pub id: u64,
     pub seqno: SequenceNo,
-    pub shape_hash: [u8; 16],
+    // pub shape_hash: [u8; 16],
+    pub shape_hash: [u8; 8],
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -61,7 +62,8 @@ pub struct LineQuadCacheKey {
     /// Only set if cursor.y == stable_row
     pub composing: Option<String>,
     pub selection: Range<usize>,
-    pub shape_hash: [u8; 16],
+    // pub shape_hash: [u8; 16],
+    pub shape_hash: [u8; 8],
     pub top_pixel_y: NotNan<f32>,
     pub left_pixel_x: NotNan<f32>,
     pub phys_line_idx: usize,
@@ -94,7 +96,8 @@ pub struct LineToElementParams<'a> {
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct LineToEleShapeCacheKey {
-    pub shape_hash: [u8; 16],
+    // pub shape_hash: [u8; 16],
+    pub shape_hash: [u8; 8],
     pub composing: Option<(usize, String)>,
     pub shape_generation: usize,
 }
@@ -839,7 +842,7 @@ impl crate::TermWindow {
                 }
             }
         };
-        metrics::histogram!("cached_cluster_shape").record(shape_resolve_start.elapsed());
+        // metrics::histogram!("cached_cluster_shape").record(shape_resolve_start.elapsed());
         log::trace!(
             "shape_resolve for cluster len {} -> elapsed {:?}",
             cluster.text.len(),
@@ -869,7 +872,7 @@ impl crate::TermWindow {
         Ok(())
     }
 
-    fn shape_hash_for_line(&mut self, line: &Line) -> [u8; 16] {
+    fn shape_hash_for_line(&mut self, line: &Line) -> [u8; 8] {
         let seqno = line.current_seqno();
         let mut id = None;
         if let Some(cached_arc) = line.get_appdata() {

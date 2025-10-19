@@ -559,6 +559,7 @@ impl Pane for LocalPane {
     }
 
     fn can_close_without_prompting(&self, _reason: CloseReason) -> bool {
+        println!("Can close without prompting...");
         if let Some(info) = self.divine_process_list(CachePolicy::FetchImmediate) {
             log::trace!(
                 "can_close_without_prompting? procs in pane {:#?}",
@@ -982,6 +983,162 @@ fn split_child(
     });
 
     (rx, signaller, pid)
+}
+
+#[derive(Debug)]
+pub struct FakeChild {
+    handle: Option<std::thread::JoinHandle<i32>>,
+}
+
+#[derive(Debug, Copy, Clone)]
+struct FakeChildKiller {}
+
+impl ChildKiller for FakeChildKiller {
+    fn kill(&mut self) -> IoResult<()> {
+        Ok(())
+    }
+
+    fn clone_killer(&self) -> Box<dyn ChildKiller + Send + Sync> {
+        Box::new(self.clone())
+    }
+}
+
+impl ChildKiller for FakeChild {
+    fn kill(&mut self) -> IoResult<()> {
+        Ok(())
+    }
+
+    fn clone_killer(&self) -> Box<dyn ChildKiller + Send + Sync> {
+        Box::new(FakeChildKiller {})
+    }
+}
+
+impl Child for FakeChild {
+    fn try_wait(&mut self) -> IoResult<Option<ExitStatus>> {
+        println!("Checking if process is awaited");
+
+        if let Some(handle) = &mut self.handle {
+            if handle.is_finished() {
+                let exit_code = self.handle.take().unwrap().join().unwrap();
+                return Ok(Some(ExitStatus::with_exit_code(exit_code as _)));
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn wait(&mut self) -> IoResult<ExitStatus> {
+        println!("Blocking on process");
+
+        if let Some(handle) = self.handle.take() {
+            let exit_code = handle.join().unwrap();
+            println!("Thread joined");
+            Ok(ExitStatus::with_exit_code(exit_code as _))
+        } else {
+            Ok(ExitStatus::with_exit_code(0))
+        }
+    }
+
+    fn process_id(&self) -> Option<u32> {
+        None
+    }
+}
+
+// Shove in the right thing here
+pub struct FakePty {
+    pub reader: termina::InMemoryBuffer,
+    pub writer: termina::InMemoryBuffer,
+
+    rows: Arc<std::sync::atomic::AtomicU16>,
+    cols: Arc<std::sync::atomic::AtomicU16>,
+
+    resizer: Arc<Mutex<Option<(u16, u16)>>>,
+
+    handle: Option<std::thread::JoinHandle<i32>>,
+}
+
+impl FakePty {
+    pub fn new_fake(rows: u16, cols: u16) -> FakePty {
+        let backend = helix_tui::backend::TerminaBackend::new_default(rows, cols).unwrap();
+
+        let writer = backend.terminal().raw_writer.clone();
+        let reader = backend.terminal().raw_reader.clone();
+
+        let rows = backend.terminal().rows.clone();
+        let cols = backend.terminal().cols.clone();
+
+        let resizer = backend.terminal().resizer.clone();
+
+        // let reader = writer.clone();
+
+        let handle = std::thread::spawn(|| {
+            let res = helix_term::main_impl(backend);
+
+            match res {
+                Ok(v) => return v,
+                Err(e) => println!("{:?}", e),
+            }
+
+            return 0;
+        });
+
+        FakePty {
+            reader,
+            writer,
+            handle: Some(handle),
+            rows,
+            cols,
+            resizer,
+        }
+    }
+
+    pub fn create_child(&mut self) -> Box<dyn Child + Send> {
+        Box::new(FakeChild {
+            handle: self.handle.take(),
+        })
+    }
+}
+
+impl MasterPty for FakePty {
+    fn resize(&self, size: PtySize) -> Result<(), Error> {
+        self.rows
+            .store(size.rows, std::sync::atomic::Ordering::Relaxed);
+        self.cols
+            .store(size.cols, std::sync::atomic::Ordering::Relaxed);
+
+        *self.resizer.lock() = Some((size.rows, size.cols));
+
+        Ok(())
+    }
+
+    fn get_size(&self) -> Result<PtySize, Error> {
+        Ok(PtySize {
+            rows: self.rows.load(std::sync::atomic::Ordering::Relaxed),
+            cols: self.cols.load(std::sync::atomic::Ordering::Relaxed),
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+    }
+
+    fn try_clone_reader(&self) -> Result<Box<dyn std::io::Read + Send>, Error> {
+        Ok(Box::new(self.writer.clone()))
+    }
+
+    fn take_writer(&self) -> Result<Box<dyn std::io::Write + Send>, Error> {
+        Ok(Box::new(self.writer.clone()))
+    }
+
+    fn process_group_leader(&self) -> Option<libc::pid_t> {
+        None
+    }
+
+    fn as_raw_fd(&self) -> Option<portable_pty::unix::RawFd> {
+        None
+    }
+
+    fn tty_name(&self) -> Option<std::path::PathBuf> {
+        None
+    }
 }
 
 impl LocalPane {
