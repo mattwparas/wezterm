@@ -58,7 +58,7 @@ use std::collections::{HashMap, LinkedList};
 use std::ops::Add;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use termwiz::hyperlink::Hyperlink;
 use termwiz::surface::SequenceNo;
@@ -581,6 +581,14 @@ impl TermWindow {
     }
 }
 
+pub static WINDOW_EVENT_HANDLER: LazyLock<(
+    std::sync::mpsc::Sender<()>,
+    Mutex<std::sync::mpsc::Receiver<()>>,
+)> = LazyLock::new(|| {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    (sender, Mutex::new(receiver))
+});
+
 impl TermWindow {
     pub async fn new_window(mux_window_id: MuxWindowId) -> anyhow::Result<()> {
         let config = configuration();
@@ -818,7 +826,6 @@ impl TermWindow {
 
         let window = Window::new_window(
             &get_window_class(),
-            // "wezterm",
             "helix",
             geometry,
             Some(&config),
@@ -901,7 +908,32 @@ impl TermWindow {
         event: WindowEvent,
         window: &Window,
     ) -> anyhow::Result<bool> {
-        log::debug!("{event:?}");
+        // @Matt - we might want to check here
+        //
+        // This could be a good way of checking against
+        // anything happening with the window?
+        //
+        //
+        // Consume events coming from steel?
+        // Otherwise, continue dispatching with business as usual...
+        //
+        //
+        // window.toggle_fullscreen();
+
+        // helix_term::commands::engine::steel::try_enter_engine(|engine| {
+        //     // println!("Does this even work");
+        // });
+
+        // Full screen events:
+        if let Ok(c) = WINDOW_EVENT_HANDLER.1.try_lock() {
+            if let Ok(value) = c.try_recv() {
+                window.toggle_fullscreen();
+            }
+        }
+
+        // .map(|x| x.try_recv()) {
+        // }
+
         match event {
             WindowEvent::Destroyed => {
                 // Ensure that we cancel any overlays we had running, so
@@ -2628,9 +2660,9 @@ impl TermWindow {
                     self.perform_key_assignment(pane, a)?;
                 }
             }
-            SpawnTab(spawn_where) => {
-                self.spawn_tab(spawn_where);
-            }
+            // SpawnTab(spawn_where) => {
+            //     self.spawn_tab(spawn_where);
+            // }
             SpawnWindow => {
                 self.spawn_command(&SpawnCommand::default(), SpawnWhere::NewWindow);
             }
@@ -3153,6 +3185,8 @@ impl TermWindow {
             PromptInputLine(args) => self.show_prompt_input_line(args),
             InputSelector(args) => self.show_input_selector(args),
             Confirmation(args) => self.show_confirmation(args),
+            // Just ignore it for now
+            _ => return Ok(PerformAssignmentResult::Handled),
         };
         Ok(PerformAssignmentResult::Handled)
     }

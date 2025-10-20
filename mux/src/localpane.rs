@@ -1069,9 +1069,9 @@ impl FakePty {
 
         let resizer = backend.terminal().resizer.clone();
 
-        // let reader = writer.clone();
-
         let handle = std::thread::spawn(|| {
+            // This should get a handle to an event stream back to the gui
+            // so that we can do gui things?
             let res = helix_term::main_impl(backend);
 
             match res {

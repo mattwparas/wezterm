@@ -23,6 +23,8 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
+use steel::steel_vm::register_fn::RegisterFn;
+use termwindow::WINDOW_EVENT_HANDLER;
 use termwiz::cell::CellAttributes;
 use termwiz::surface::{Line, SEQ_ZERO};
 use unicode_normalization::UnicodeNormalization;
@@ -1250,6 +1252,15 @@ fn run() -> anyhow::Result<()> {
             })?
         }
     };
+
+    // @Matt: Install all the things here!
+
+    helix_term::commands::engine::steel::enter_engine(|engine| {
+        // TODO: Lets just get the window going
+        engine.register_fn("wezterm-full-screen", || {
+            WINDOW_EVENT_HANDLER.0.send(()).ok()
+        });
+    });
 
     match sub {
         SubCommand::Start(start) => {

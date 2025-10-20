@@ -268,6 +268,9 @@ impl super::TermWindow {
             }
         }
 
+        // println!("{:?}", keycode);
+
+        // TODO: @Matt -> Add a fake modal on top which can delegate to helix?
         if is_down {
             if only_key_bindings == OnlyKeyBindings::No {
                 if let Some(modal) = self.get_modal() {

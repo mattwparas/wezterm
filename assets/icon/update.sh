@@ -4,7 +4,8 @@
 set -x
 cd $(git rev-parse --show-toplevel)/assets/icon
 
-src=wezterm-icon.svg
+src="../../../scratch/helix/contrib/helix.png"
+# src=wezterm-icon.svg
 
 conv_opts="-colors 256 -background none -density 300"
 

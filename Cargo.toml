@@ -284,6 +284,7 @@ helix-tui = { path = "../scratch/helix/helix-tui" }
 helix-term = { path = "../scratch/helix/helix-term" }
 mimalloc = "0.1.47"
 rustc-hash = "2.1.1"
+steel-core = { git = "https://github.com/mattwparas/steel.git", version = "0.7.0", features = ["anyhow", "dylibs", "sync", "triomphe", "imbl"] }
 
 
 [patch.crates-io]

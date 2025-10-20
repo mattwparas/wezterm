@@ -108,6 +108,9 @@ window-funcs.workspace = true
 window.workspace = true
 mimalloc.workspace = true
 
+helix-term.workspace = true
+steel-core.workspace = true
+
 [target."cfg(windows)".dependencies]
 shared_library.workspace = true
 winapi = { workspace=true, features = [
