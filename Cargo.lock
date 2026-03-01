@@ -3069,6 +3069,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
 
 [[package]]
+name = "libmimalloc-sys"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "667f4fec20f29dfc6bc7357c582d91796c169ad7e2fce709468aefeb2c099870"
+dependencies = [
+ "cc",
+ "libc",
+]
+
+[[package]]
 name = "libredox"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3348,6 +3358,15 @@ checksum = "3045b4193fbdc5b5681f32f11070da9be3609f189a79f3390706d42587f46bb5"
 dependencies = [
  "ahash",
  "portable-atomic",
+]
+
+[[package]]
+name = "mimalloc"
+version = "0.1.48"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1ee66a4b64c74f4ef288bcbb9192ad9c3feaad75193129ac8509af543894fd8"
+dependencies = [
+ "libmimalloc-sys",
 ]
 
 [[package]]
@@ -6907,6 +6926,7 @@ dependencies = [
  "log",
  "luahelper",
  "metrics",
+ "mimalloc",
  "mlua",
  "mux",
  "mux-lua",
@@ -6919,6 +6939,7 @@ dependencies = [
  "ratelim",
  "rayon",
  "regex",
+ "rustc-hash 2.1.1",
  "serde",
  "serde_json",
  "shared_library",
@@ -7083,6 +7104,7 @@ dependencies = [
  "fixedbitset",
  "k9",
  "ordered-float 4.6.0",
+ "rustc-hash 2.1.1",
  "serde",
  "siphasher",
  "unicode-segmentation",

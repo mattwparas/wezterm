@@ -558,15 +558,15 @@ impl DecodedImage {
 /// A number of items here are HashMaps rather than LfuCaches;
 /// eviction is managed by recreating Self when the Atlas is filled
 pub struct GlyphCache {
-    glyph_cache: HashMap<GlyphKey, Rc<CachedGlyph>>,
+    glyph_cache: rustc_hash::FxHashMap<GlyphKey, Rc<CachedGlyph>>,
     pub atlas: Atlas,
     pub fonts: Rc<FontConfiguration>,
     pub image_cache: LfuCache<[u8; 32], DecodedImage>,
-    frame_cache: HashMap<[u8; 32], Sprite>,
-    line_glyphs: HashMap<LineKey, Sprite>,
-    pub block_glyphs: HashMap<SizedBlockKey, Sprite>,
-    pub cursor_glyphs: HashMap<(Option<CursorShape>, u8), Sprite>,
-    pub color: HashMap<(RgbColor, NotNan<f32>), Sprite>,
+    frame_cache: rustc_hash::FxHashMap<[u8; 32], Sprite>,
+    line_glyphs: rustc_hash::FxHashMap<LineKey, Sprite>,
+    pub block_glyphs: rustc_hash::FxHashMap<SizedBlockKey, Sprite>,
+    pub cursor_glyphs: rustc_hash::FxHashMap<(Option<CursorShape>, u8), Sprite>,
+    pub color: rustc_hash::FxHashMap<(RgbColor, NotNan<f32>), Sprite>,
     min_frame_duration: Duration,
 }
 
@@ -577,19 +577,19 @@ impl GlyphCache {
 
         Ok(Self {
             fonts: Rc::clone(fonts),
-            glyph_cache: HashMap::new(),
+            glyph_cache: HashMap::default(),
             image_cache: LfuCache::new(
                 "glyph_cache.image_cache.hit.rate",
                 "glyph_cache.image_cache.miss.rate",
                 |config| config.glyph_cache_image_cache_size,
                 &fonts.config(),
             ),
-            frame_cache: HashMap::new(),
+            frame_cache: HashMap::default(),
             atlas,
-            line_glyphs: HashMap::new(),
-            block_glyphs: HashMap::new(),
-            cursor_glyphs: HashMap::new(),
-            color: HashMap::new(),
+            line_glyphs: HashMap::default(),
+            block_glyphs: HashMap::default(),
+            cursor_glyphs: HashMap::default(),
+            color: HashMap::default(),
             min_frame_duration: Duration::from_millis(1000 / fonts.config().max_fps as u64),
         })
     }
@@ -606,19 +606,19 @@ impl GlyphCache {
 
         Ok(Self {
             fonts: Rc::clone(fonts),
-            glyph_cache: HashMap::new(),
+            glyph_cache: HashMap::default(),
             image_cache: LfuCache::new(
                 "glyph_cache.image_cache.hit.rate",
                 "glyph_cache.image_cache.miss.rate",
                 |config| config.glyph_cache_image_cache_size,
                 &fonts.config(),
             ),
-            frame_cache: HashMap::new(),
+            frame_cache: HashMap::default(),
             atlas,
-            line_glyphs: HashMap::new(),
-            block_glyphs: HashMap::new(),
-            cursor_glyphs: HashMap::new(),
-            color: HashMap::new(),
+            line_glyphs: HashMap::default(),
+            block_glyphs: HashMap::default(),
+            cursor_glyphs: HashMap::default(),
+            color: HashMap::default(),
             min_frame_duration: Duration::from_millis(1000 / fonts.config().max_fps as u64),
         })
     }
@@ -897,7 +897,7 @@ impl GlyphCache {
     }
 
     fn cached_image_impl(
-        frame_cache: &mut HashMap<[u8; 32], Sprite>,
+        frame_cache: &mut rustc_hash::FxHashMap<[u8; 32], Sprite>,
         atlas: &mut Atlas,
         decoded: &DecodedImage,
         padding: Option<usize>,

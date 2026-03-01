@@ -9,6 +9,7 @@ use crate::overlay::{
     start_overlay, start_overlay_pane, CopyModeParams, CopyOverlay, LauncherArgs, LauncherFlags,
     QuickSelectOverlay,
 };
+use crate::quad::HeapQuadAllocator;
 use crate::resize_increment_calculator::ResizeIncrementCalculator;
 use crate::scripting::guiwin::GuiWin;
 use crate::scrollbar::*;
@@ -60,6 +61,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use termwiz::cellcluster::CellCluster;
 use termwiz::hyperlink::Hyperlink;
 use termwiz::surface::SequenceNo;
 use wezterm_dynamic::Value;
@@ -463,6 +465,10 @@ pub struct TermWindow {
     gl: Option<Rc<glium::backend::Context>>,
     webgpu: Option<Rc<WebGpuState>>,
     config_subscription: Option<config::ConfigSubscription>,
+
+    cluster_cache: RefCell<Vec<CellCluster>>,
+
+    heap_quad_allocator_cache: RefCell<HeapQuadAllocator>,
 }
 
 impl TermWindow {
@@ -788,6 +794,8 @@ impl TermWindow {
             key_table_state: KeyTableState::default(),
             modal: RefCell::new(None),
             opengl_info: None,
+            cluster_cache: RefCell::new(Vec::new()),
+            heap_quad_allocator_cache: RefCell::new(HeapQuadAllocator::default()),
         };
 
         let tw = Rc::new(RefCell::new(myself));

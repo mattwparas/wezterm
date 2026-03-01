@@ -62,6 +62,11 @@ mod utilsprites;
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 pub use selection::SelectionMode;
 pub use termwindow::{set_window_class, set_window_position, TermWindow, ICON_DATA};
 

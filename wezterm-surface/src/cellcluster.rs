@@ -166,6 +166,126 @@ impl CellCluster {
         }
     }
 
+    /// Compute the list of CellClusters from a set of visible cells.
+    /// The input is typically the result of calling `Line::visible_cells()`.
+    pub fn make_clusters_from<'a>(
+        hint: usize,
+        iter: impl Iterator<Item = CellRef<'a>>,
+        bidi_hint: Option<ParagraphDirectionHint>,
+        clusters: &mut Vec<CellCluster>,
+    ) {
+        let mut last_cluster = None;
+        // let mut clusters = Vec::new();
+        let mut whitespace_run = 0;
+        let mut only_whitespace = false;
+
+        for c in iter {
+            let cell_idx = c.cell_index();
+            let presentation = c.presentation();
+            let cell_str = c.str();
+            let normalized_attr = if c.attrs().wrapped() {
+                let mut attr_storage = c.attrs().clone();
+                attr_storage.set_wrapped(false);
+                Cow::Owned(attr_storage)
+            } else {
+                Cow::Borrowed(c.attrs())
+            };
+
+            last_cluster = match last_cluster.take() {
+                None => {
+                    // Start new cluster
+                    only_whitespace = cell_str == " ";
+                    whitespace_run = if only_whitespace { 1 } else { 0 };
+                    Some(CellCluster::new(
+                        hint,
+                        presentation,
+                        normalized_attr.into_owned(),
+                        cell_str,
+                        cell_idx,
+                        c.width(),
+                    ))
+                }
+                Some(mut last) => {
+                    if last.attrs != *normalized_attr || last.presentation != presentation {
+                        // Flush pending cluster and start a new one
+                        clusters.push(last);
+
+                        only_whitespace = cell_str == " ";
+                        whitespace_run = if only_whitespace { 1 } else { 0 };
+                        Some(CellCluster::new(
+                            hint,
+                            presentation,
+                            normalized_attr.into_owned(),
+                            cell_str,
+                            cell_idx,
+                            c.width(),
+                        ))
+                    } else {
+                        // Add to current cluster.
+
+                        // Force cluster to break when we get a run of 2 whitespace
+                        // characters following non-whitespace.
+                        // This reduces the amount of shaping work for scenarios where
+                        // the terminal is wide and a long series of short lines are printed;
+                        // the shaper can cache the few variations of trailing whitespace
+                        // and focus on shaping the shorter cluster sequences.
+                        // Or:
+                        // when bidi is disabled, force break on whitespace boundaries.
+                        // This reduces shaping load in the case where is a line is
+                        // updated continually, but only a portion of it changes
+                        // (eg: progress counter).
+                        let was_whitespace = whitespace_run > 0;
+                        if cell_str == " " {
+                            whitespace_run += 1;
+                        } else {
+                            whitespace_run = 0;
+                            only_whitespace = false;
+                        }
+
+                        let force_break = (!only_whitespace && whitespace_run > 2)
+                            || (!only_whitespace && bidi_hint.is_none() && was_whitespace);
+
+                        if force_break {
+                            clusters.push(last);
+
+                            only_whitespace = cell_str == " ";
+                            if whitespace_run > 0 {
+                                whitespace_run = 1;
+                            }
+                            Some(CellCluster::new(
+                                hint,
+                                presentation,
+                                normalized_attr.into_owned(),
+                                cell_str,
+                                cell_idx,
+                                c.width(),
+                            ))
+                        } else {
+                            last.add(cell_str, cell_idx, c.width());
+                            Some(last)
+                        }
+                    }
+                }
+            };
+        }
+
+        if let Some(cluster) = last_cluster {
+            // Don't forget to include any pending cluster on the final step!
+            clusters.push(cluster);
+        }
+
+        if let Some(hint) = bidi_hint {
+            let mut resolved_clusters = vec![];
+
+            let mut context = BidiContext::new();
+            for cluster in clusters.drain(..) {
+                Self::resolve_bidi(&mut context, hint, cluster, &mut resolved_clusters);
+            }
+
+            *clusters = resolved_clusters;
+        }
+    }
+
     fn resolve_bidi(
         context: &mut BidiContext,
         hint: ParagraphDirectionHint,

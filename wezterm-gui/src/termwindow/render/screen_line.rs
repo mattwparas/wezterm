@@ -727,16 +727,20 @@ impl crate::TermWindow {
         } else {
             None
         };
-        let cell_clusters = if let Some((cursor_x, composing)) =
+
+        let mut cell_clusters = self.cluster_cache.borrow_mut();
+        cell_clusters.clear();
+
+        if let Some((cursor_x, composing)) =
             params.shape_key.as_ref().and_then(|k| k.composing.as_ref())
         {
             // Create an updated line with the composition overlaid
             let mut line = params.line.clone();
             let seqno = line.current_seqno();
             line.overlay_text_with_attribute(*cursor_x, &composing, CellAttributes::blank(), seqno);
-            line.cluster(bidi_hint)
+            line.cluster_from(bidi_hint, &mut cell_clusters)
         } else {
-            params.line.cluster(bidi_hint)
+            params.line.cluster_from(bidi_hint, &mut cell_clusters)
         };
 
         let gl_state = self.render_state.as_ref().unwrap();
@@ -746,7 +750,7 @@ impl crate::TermWindow {
         let mut expires = None;
         let mut invalidate_on_hover_change = false;
 
-        for cluster in &cell_clusters {
+        for cluster in cell_clusters.iter() {
             if !matches!(last_style.as_ref(), Some(ClusterStyleCache{attrs,..}) if *attrs == &cluster.attrs)
             {
                 let attrs = &cluster.attrs;

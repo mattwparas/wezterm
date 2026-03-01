@@ -310,9 +310,12 @@ impl BoxedQuad {
 
 #[derive(Default)]
 pub struct HeapQuadAllocator {
-    layer0: Vec<Box<BoxedQuad>>,
-    layer1: Vec<Box<BoxedQuad>>,
-    layer2: Vec<Box<BoxedQuad>>,
+    // layer0: Vec<Box<BoxedQuad>>,
+    // layer1: Vec<Box<BoxedQuad>>,
+    // layer2: Vec<Box<BoxedQuad>>,
+    pub layer0: Vec<BoxedQuad>,
+    pub layer1: Vec<BoxedQuad>,
+    pub layer2: Vec<BoxedQuad>,
 }
 
 impl std::fmt::Debug for HeapQuadAllocator {
@@ -332,6 +335,12 @@ impl HeapQuadAllocator {
         metrics::histogram!("quad_buffer_apply").record(start.elapsed());
         Ok(())
     }
+
+    pub fn clear(&mut self) {
+        self.layer0.clear();
+        self.layer1.clear();
+        self.layer2.clear();
+    }
 }
 
 impl TripleLayerQuadAllocatorTrait for HeapQuadAllocator {
@@ -343,7 +352,7 @@ impl TripleLayerQuadAllocatorTrait for HeapQuadAllocator {
             _ => unreachable!(),
         };
 
-        quads.push(Box::new(BoxedQuad::default()));
+        quads.push(BoxedQuad::default());
 
         let quad = quads.last_mut().unwrap();
         Ok(QuadImpl::Boxed(quad))
@@ -369,7 +378,7 @@ impl TripleLayerQuadAllocatorTrait for HeapQuadAllocator {
             unsafe { std::slice::from_raw_parts(vertices.as_ptr().cast(), vertices.len() / 4) };
 
         for quad in src_quads {
-            dest_quads.push(Box::new(BoxedQuad::from_vertices(quad)));
+            dest_quads.push(BoxedQuad::from_vertices(quad));
         }
     }
 }

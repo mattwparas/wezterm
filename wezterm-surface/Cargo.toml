@@ -27,6 +27,8 @@ wezterm-dynamic = {workspace = true}
 wezterm-escape-parser = {workspace = true}
 wezterm-input-types.workspace = true
 
+rustc-hash.workspace = true
+
 [features]
 default = []
 std = ["fancy-regex/std", "wezterm-cell/std", "wezterm-dynamic/std", "wezterm-escape-parser/std", "fixedbitset/std", "fancy-regex/perf", "fancy-regex/unicode"]

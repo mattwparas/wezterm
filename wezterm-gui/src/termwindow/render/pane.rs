@@ -308,8 +308,8 @@ impl crate::TermWindow {
                 None => dims.physical_top..dims.physical_top + dims.viewport_rows as StableRowIndex,
             };
 
-            pos.pane
-                .apply_hyperlinks(stable_range.clone(), &self.config.hyperlink_rules);
+            // pos.pane
+            //     .apply_hyperlinks(stable_range.clone(), &self.config.hyperlink_rules);
 
             struct LineRender<'a, 'b> {
                 term_window: &'a mut crate::TermWindow,
@@ -468,6 +468,7 @@ impl crate::TermWindow {
                     }
 
                     let mut buf = HeapQuadAllocator::default();
+
                     let next_due = self.term_window.has_animation.borrow_mut().take();
 
                     let shape_key = LineToEleShapeCacheKey {
